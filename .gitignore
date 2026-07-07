@@ -1,0 +1,31 @@
+# Compiled C/C++ files
+*.o
+*.so
+*.a
+*.exe
+*.dll
+
+# OMNeT++ build output
+out/
+build/
+bin/
+
+# Simulation results
+results/
+*.sca
+*.vec
+*.vci
+*.elog
+
+# Temporary files
+*.tmp
+*.log
+*~
+.DS_Store
+
+# Eclipse temporary metadata
+.metadata/
+
+# Generated message files
+*_m.cc
+*_m.h
