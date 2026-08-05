@@ -31,7 +31,7 @@ PROJECTRELATIVE_PATH = src
 O = $(PROJECT_OUTPUT_DIR)/$(CONFIGNAME)/$(PROJECTRELATIVE_PATH)
 
 # Object files for local .cc, .msg and .sm files
-OBJS = $O/JobGenerator.o $O/LoadBalancer.o $O/Job_m.o
+OBJS = $O/JobGenerator.o $O/LoadBalancer.o $O/Server.o $O/Job_m.o
 
 # Message files
 MSGFILES = \

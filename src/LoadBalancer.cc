@@ -6,6 +6,7 @@
  */
 
 #include "LoadBalancer.h"
+#include "Job_m.h"
 
 Define_Module(LoadBalancer);
 
@@ -13,10 +14,13 @@ void LoadBalancer::handleMessage(cMessage *msg)
 {
     int numberOfServers = par("numberOfServers");
 
-    EV << "Sending " << msg->getName()
+    Job *job = check_and_cast<Job *>(msg);
+    job->setServerArrivalTime(simTime());
+
+    EV << "Sending job " << job->getJobId()
        << " to server " << nextServer << "\n";
 
-    send(msg, "out", nextServer);
+    send(job, "out", nextServer);
 
     nextServer = (nextServer + 1) % numberOfServers;
 }
