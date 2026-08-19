@@ -17,7 +17,7 @@ package src;
 simple JobGenerator
 {
     parameters:
-        double generationInterval @unit(s) = default(2s);
+        volatile double generationInterval @unit(s) = default(2s);
         int numberOfJobs = default(10);
 
     gates:

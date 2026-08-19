@@ -32,6 +32,12 @@ class Server : public cSimpleModule
     virtual void finish() override;
 
     void startService(cMessage *job);
+
+  public:
+      int getSystemLength() const
+      {
+          return queue.getLength() + (currentJob != nullptr ? 1 : 0);
+      }
 };
 
 #endif /* SRC_SERVER_H_ */

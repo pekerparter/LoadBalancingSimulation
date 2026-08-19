@@ -12,7 +12,8 @@ Define_Module(Server);
 
 void Server::initialize()
 {
-    serviceCompletionEvent = new cMessage("serviceCompletionEvent");
+    serviceCompletionEvent =
+        new cMessage("serviceCompletionEvent");
 
     responseTimeSignal = registerSignal("responseTime");
     waitingTimeSignal = registerSignal("waitingTime");
@@ -22,14 +23,18 @@ void Server::initialize()
 void Server::handleMessage(cMessage *msg)
 {
     if (msg == serviceCompletionEvent) {
+        Job *completedJob =
+            check_and_cast<Job *>(currentJob);
+
         simtime_t responseTime =
-            simTime() - currentJob->getCreationTime();
+            simTime() - completedJob->getCreationTime();
 
         emit(responseTimeSignal, responseTime);
 
-        EV << "Completed " << currentJob->getName()
+        EV << "Completed job " << completedJob->getJobId()
            << " at time " << simTime()
-           << ", response time = " << responseTime << "\n";
+           << ", response time = "
+           << responseTime << "\n";
 
         totalBusyTime += simTime() - serviceStartTime;
 
@@ -44,15 +49,17 @@ void Server::handleMessage(cMessage *msg)
         }
     }
     else {
+        Job *job = check_and_cast<Job *>(msg);
+
         if (currentJob == nullptr) {
-            startService(msg);
+            startService(job);
         }
         else {
-            queue.insert(msg);
+            queue.insert(job);
 
             emit(queueLengthSignal, queue.getLength());
 
-            EV << "Queued " << msg->getName()
+            EV << "Queued job " << job->getJobId()
                << ", queue length = "
                << queue.getLength() << "\n";
         }
@@ -78,9 +85,13 @@ void Server::startService(cMessage *job)
        << typedJob->getJobId()
        << " at time " << simTime()
        << ", waiting time = " << waitingTime
-       << ", service duration = " << duration << "\n";
+       << ", service duration = "
+       << duration << "\n";
 
-    scheduleAt(simTime() + duration, serviceCompletionEvent);
+    scheduleAt(
+        simTime() + duration,
+        serviceCompletionEvent
+    );
 }
 
 void Server::finish()
@@ -97,7 +108,7 @@ void Server::finish()
     }
 
     recordScalar("utilization", utilization);
-    recordScalar("completedQueueLength", queue.getLength());
+    recordScalar("remainingQueueLength", queue.getLength());
 
     cancelAndDelete(serviceCompletionEvent);
     serviceCompletionEvent = nullptr;

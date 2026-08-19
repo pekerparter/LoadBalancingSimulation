@@ -16,6 +16,9 @@ class LoadBalancer : public cSimpleModule
 {
   private:
     int nextServer = 0;
+    int getServerLoad(int serverIndex);
+    int chooseShortestQueue(int numberOfServers);
+    int choosePowerOfTwo(int numberOfServers);
 
   protected:
     virtual void handleMessage(cMessage *msg) override;

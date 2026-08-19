@@ -18,7 +18,7 @@ package src;
 simple Server
 {
     parameters:
-        double serviceTime @unit(s) = default(1s);
+        volatile double serviceTime @unit(s) = default(1s);
 
     gates:
         input in;

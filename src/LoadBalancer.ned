@@ -19,6 +19,7 @@ simple LoadBalancer
 {
     parameters:
         int numberOfServers = default(2);
+        string algorithm = default("roundRobin");
 
     gates:
         input in;
