@@ -19,6 +19,7 @@ simple Server
 {
     parameters:
         volatile double serviceTime @unit(s) = default(1s);
+        double measurementStart @unit(s) = default(0s);
 
     gates:
         input in;

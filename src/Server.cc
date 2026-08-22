@@ -8,6 +8,8 @@
 #include "Server.h"
 #include "Job_m.h"
 
+#include <algorithm>
+
 Define_Module(Server);
 
 void Server::initialize()
@@ -18,36 +20,74 @@ void Server::initialize()
     responseTimeSignal = registerSignal("responseTime");
     waitingTimeSignal = registerSignal("waitingTime");
     queueLengthSignal = registerSignal("queueLength");
+
+    measurementStart = par("measurementStart");
+
+    measuredBusyTime = SIMTIME_ZERO;
+    completedJobs = 0;
+
+    queueArea = 0.0;
+    lastQueueChangeTime = SIMTIME_ZERO;
 }
+
 
 void Server::handleMessage(cMessage *msg)
 {
     if (msg == serviceCompletionEvent) {
+
         Job *completedJob =
             check_and_cast<Job *>(currentJob);
 
-        simtime_t responseTime =
-            simTime() - completedJob->getCreationTime();
+        // Add the busy interval of the completed job.
+        addBusyInterval(serviceStartTime, simTime());
 
-        emit(responseTimeSignal, responseTime);
+        // Only use jobs created after the warm-up
+        // for response-time and throughput measurements.
+        if (completedJob->getCreationTime() >= measurementStart) {
 
-        EV << "Completed job " << completedJob->getJobId()
-           << " at time " << simTime()
-           << ", response time = "
-           << responseTime << "\n";
+            simtime_t responseTime =
+                simTime() - completedJob->getCreationTime();
 
-        totalBusyTime += simTime() - serviceStartTime;
+            emit(responseTimeSignal, responseTime);
+
+            responseTimeStats.collect(responseTime.dbl());
+
+            completedJobs++;
+
+            EV << "Completed job "
+               << completedJob->getJobId()
+               << " at time " << simTime()
+               << ", response time = "
+               << responseTime << "\n";
+        }
+        else {
+            EV << "Completed warm-up job "
+               << completedJob->getJobId()
+               << " at time " << simTime()
+               << "\n";
+        }
 
         delete currentJob;
         currentJob = nullptr;
 
         if (!queue.isEmpty()) {
+
+            // Queue length is about to change,
+            // so first account for how long it
+            // stayed at its previous value.
+            updateQueueArea();
+
             cMessage *nextJob =
                 check_and_cast<cMessage *>(queue.pop());
+
+            if (simTime() >= measurementStart) {
+                emit(queueLengthSignal, queue.getLength());
+            }
 
             startService(nextJob);
         }
     }
+
     else {
         Job *job = check_and_cast<Job *>(msg);
 
@@ -55,37 +95,62 @@ void Server::handleMessage(cMessage *msg)
             startService(job);
         }
         else {
+            updateQueueArea();
+
             queue.insert(job);
 
-            emit(queueLengthSignal, queue.getLength());
+            if (simTime() >= measurementStart) {
+                emit(queueLengthSignal, queue.getLength());
+            }
 
-            EV << "Queued job " << job->getJobId()
+            EV << "Queued job "
+               << job->getJobId()
                << ", queue length = "
                << queue.getLength() << "\n";
         }
     }
 }
 
+
 void Server::startService(cMessage *job)
 {
     currentJob = job;
     serviceStartTime = simTime();
 
-    Job *typedJob = check_and_cast<Job *>(job);
+    Job *typedJob =
+        check_and_cast<Job *>(job);
 
-    simtime_t waitingTime =
-        simTime() - typedJob->getServerArrivalTime();
+    // Only record waiting time for jobs that
+    // arrived at the server after warm-up.
+    if (typedJob->getServerArrivalTime()
+        >= measurementStart) {
 
-    emit(waitingTimeSignal, waitingTime);
-    emit(queueLengthSignal, queue.getLength());
+        simtime_t waitingTime =
+            simTime()
+            - typedJob->getServerArrivalTime();
 
-    simtime_t duration = par("serviceTime");
+        emit(waitingTimeSignal, waitingTime);
 
-    EV << "Starting service for job "
-       << typedJob->getJobId()
-       << " at time " << simTime()
-       << ", waiting time = " << waitingTime
-       << ", service duration = "
+        waitingTimeStats.collect(
+            waitingTime.dbl()
+        );
+
+        EV << "Starting service for job "
+           << typedJob->getJobId()
+           << " at time " << simTime()
+           << ", waiting time = "
+           << waitingTime;
+    }
+    else {
+        EV << "Starting service for warm-up job "
+           << typedJob->getJobId()
+           << " at time " << simTime();
+    }
+
+    simtime_t duration =
+        par("serviceTime");
+
+    EV << ", service duration = "
        << duration << "\n";
 
     scheduleAt(
@@ -94,21 +159,130 @@ void Server::startService(cMessage *job)
     );
 }
 
+
+void Server::addBusyInterval(
+    simtime_t start,
+    simtime_t end)
+{
+    // Ignore intervals entirely before measurement.
+    if (end <= measurementStart) {
+        return;
+    }
+
+    simtime_t measuredStart =
+        std::max(start, measurementStart);
+
+    measuredBusyTime +=
+        end - measuredStart;
+}
+
+
+void Server::updateQueueArea()
+{
+    simtime_t now = simTime();
+
+    if (now > measurementStart) {
+
+        simtime_t intervalStart =
+            std::max(
+                lastQueueChangeTime,
+                measurementStart
+            );
+
+        if (now > intervalStart) {
+            double duration =
+                (now - intervalStart).dbl();
+
+            queueArea +=
+                queue.getLength() * duration;
+        }
+    }
+
+    lastQueueChangeTime = now;
+}
+
+
 void Server::finish()
 {
+    // Account for the queue state until the
+    // end of the simulation.
+    updateQueueArea();
+
+    // If a job is still being processed when
+    // the simulation stops, count its busy time
+    // up to the end.
     if (currentJob != nullptr) {
-        totalBusyTime += simTime() - serviceStartTime;
+        addBusyInterval(
+            serviceStartTime,
+            simTime()
+        );
     }
 
-    double utilization = 0;
+    simtime_t measurementDuration =
+        simTime() - measurementStart;
 
-    if (simTime() > SIMTIME_ZERO) {
+    double utilization = 0.0;
+    double throughput = 0.0;
+    double meanQueueLength = 0.0;
+
+    if (measurementDuration > SIMTIME_ZERO) {
+
         utilization =
-            totalBusyTime.dbl() / simTime().dbl();
+            measuredBusyTime.dbl()
+            / measurementDuration.dbl();
+
+        throughput =
+            completedJobs
+            / measurementDuration.dbl();
+
+        meanQueueLength =
+            queueArea
+            / measurementDuration.dbl();
     }
 
-    recordScalar("utilization", utilization);
-    recordScalar("remainingQueueLength", queue.getLength());
+    recordScalar(
+        "utilization",
+        utilization
+    );
+
+    recordScalar(
+        "completedJobs",
+        completedJobs
+    );
+
+    recordScalar(
+        "throughput",
+        throughput
+    );
+
+    recordScalar(
+        "meanQueueLength",
+        meanQueueLength
+    );
+
+    if (responseTimeStats.getCount() > 0) {
+        recordScalar(
+            "meanResponseTime",
+            responseTimeStats.getMean()
+        );
+
+        recordScalar(
+            "responseTimeStddev",
+            responseTimeStats.getStddev()
+        );
+    }
+
+    if (waitingTimeStats.getCount() > 0) {
+        recordScalar(
+            "meanWaitingTime",
+            waitingTimeStats.getMean()
+        );
+
+        recordScalar(
+            "waitingTimeStddev",
+            waitingTimeStats.getStddev()
+        );
+    }
 
     cancelAndDelete(serviceCompletionEvent);
     serviceCompletionEvent = nullptr;
@@ -117,6 +291,11 @@ void Server::finish()
     currentJob = nullptr;
 
     while (!queue.isEmpty()) {
-        delete check_and_cast<cMessage *>(queue.pop());
+        delete check_and_cast<cMessage *>(
+            queue.pop()
+        );
     }
 }
+
+
+

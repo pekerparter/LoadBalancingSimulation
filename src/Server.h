@@ -16,6 +16,7 @@ class Server : public cSimpleModule
 {
   private:
     cQueue queue;
+
     cMessage *serviceCompletionEvent = nullptr;
     cMessage *currentJob = nullptr;
 
@@ -24,7 +25,17 @@ class Server : public cSimpleModule
     simsignal_t queueLengthSignal;
 
     simtime_t serviceStartTime;
-    simtime_t totalBusyTime = 0;
+    simtime_t measurementStart;
+
+    // Statistics for the measurement period only
+    simtime_t measuredBusyTime = 0;
+    long completedJobs = 0;
+
+    cStdDev responseTimeStats;
+    cStdDev waitingTimeStats;
+
+    double queueArea = 0.0;
+    simtime_t lastQueueChangeTime = 0;
 
   protected:
     virtual void initialize() override;
@@ -33,11 +44,15 @@ class Server : public cSimpleModule
 
     void startService(cMessage *job);
 
+    void addBusyInterval(simtime_t start, simtime_t end);
+    void updateQueueArea();
+
   public:
-      int getSystemLength() const
-      {
-          return queue.getLength() + (currentJob != nullptr ? 1 : 0);
-      }
+    int getSystemLength() const
+    {
+        return queue.getLength()
+             + (currentJob != nullptr ? 1 : 0);
+    }
 };
 
 #endif /* SRC_SERVER_H_ */
