@@ -32,10 +32,7 @@ network LoadBalancingNetwork
                 numberOfServers = parent.numberOfServers;
         }
 
-        server[numberOfServers]: Server {
-            parameters:
-                serviceTime = default(1s);
-        }
+        server[numberOfServers]: Server;
 
     connections:
         generator.out --> loadBalancer.in;

@@ -26,9 +26,10 @@ void JobGenerator::handleMessage(cMessage *msg)
     Job *job = new Job("job");
     job->setJobId(nextJobId);
     job->setCreationTime(simTime());
+    job->setServiceTime(par("jobServiceTime"));
 
-    EV << "Generated job " << nextJobId
-       << " at time " << simTime() << "\n";
+    EV << "Generated job " << nextJobId << " at time " << simTime()
+       << ", service requirement = " << job->getServiceTime() <<"\n";
 
     send(job, "out");
 

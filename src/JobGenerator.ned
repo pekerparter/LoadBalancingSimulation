@@ -18,6 +18,7 @@ simple JobGenerator
 {
     parameters:
         volatile double generationInterval @unit(s) = default(2s);
+        volatile double jobServiceTime @unit(s) = default(1s);
         int numberOfJobs = default(10);
 
     gates:

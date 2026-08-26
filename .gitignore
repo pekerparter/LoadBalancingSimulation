@@ -29,3 +29,7 @@ results/
 # Generated message files
 *_m.cc
 *_m.h
+src/LoadBalancingSimulation
+simulations/.qtenvrc
+*.anf
+*_warmup.png

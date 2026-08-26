@@ -18,8 +18,15 @@ package src;
 simple Server
 {
     parameters:
-        volatile double serviceTime @unit(s) = default(1s);
         double measurementStart @unit(s) = default(0s);
+
+        @signal[responseTime](type=simtime_t);
+        @signal[waitingTime](type=simtime_t);
+        @signal[queueLength](type=long);
+
+        @statistic[responseTime](source=responseTime; record=vector);
+        @statistic[waitingTime](source=waitingTime; record=vector);
+        @statistic[queueLength](source=queueLength; record=vector);
 
     gates:
         input in;

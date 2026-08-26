@@ -147,8 +147,7 @@ void Server::startService(cMessage *job)
            << " at time " << simTime();
     }
 
-    simtime_t duration =
-        par("serviceTime");
+    simtime_t duration = typedJob->getServiceTime();
 
     EV << ", service duration = "
        << duration << "\n";
