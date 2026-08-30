@@ -233,14 +233,17 @@ out/clang-release/src/LoadBalancingSimulation
 
 For example:
 
-```bash 6.3
+OMNeT++ 6.3
+```bash
 ./out/clang-release/src/LoadBalancingSimulation \
     -u Cmdenv \
     -n . \
     -f simulations/omnetpp.ini \
     -c Final_N4_High
 ```
-```bash 6.2
+
+OMNeT++ 6.2
+```bash
 ./out/gcc-release/src/LoadBalancingSimulation \
     -u Cmdenv \
     -n . \
@@ -258,7 +261,8 @@ Either:
 
 Or:
 
-```bash 6.3
+OMNeT++ 6.3
+```bash
 for config in \
     Final_N2_Low Final_N2_Medium Final_N2_High \
     Final_N4_Low Final_N4_Medium Final_N4_High \
@@ -271,7 +275,9 @@ do
         -c "$config"
 done
 ```
-```bash 6.2
+
+OMNeT++ 6.2
+```bash
 for config in \
     Final_N2_Low Final_N2_Medium Final_N2_High \
     Final_N4_Low Final_N4_Medium Final_N4_High \
