@@ -194,7 +194,7 @@ Simulation results, generated plots, and compiled binaries are intentionally exc
 
 ## Software Environment
 
-The project was developed and tested with:
+The project was developed and tested primarily with:
 
 ```text
 OMNeT++ 6.3.0
@@ -202,6 +202,8 @@ INET 4.6.0 environment
 Linux / WSL
 Python 3
 ```
+Compatibility was additionally verified using the course-provided OMNeT++ 6.2.0 virtual machine.
+The project successfully builds and executes the validation scenario under OMNeT++ 6.2.0.
 
 The simulation itself uses standard OMNeT++ modules and messages.
 
@@ -231,8 +233,15 @@ out/clang-release/src/LoadBalancingSimulation
 
 For example:
 
-```bash
+```bash 6.3
 ./out/clang-release/src/LoadBalancingSimulation \
+    -u Cmdenv \
+    -n . \
+    -f simulations/omnetpp.ini \
+    -c Final_N4_High
+```
+```bash 6.2
+./out/gcc-release/src/LoadBalancingSimulation \
     -u Cmdenv \
     -n . \
     -f simulations/omnetpp.ini \
@@ -249,13 +258,26 @@ Either:
 
 Or:
 
-```bash
+```bash 6.3
 for config in \
     Final_N2_Low Final_N2_Medium Final_N2_High \
     Final_N4_Low Final_N4_Medium Final_N4_High \
     Final_N8_Low Final_N8_Medium Final_N8_High
 do
     ./out/clang-release/src/LoadBalancingSimulation \
+        -u Cmdenv \
+        -n . \
+        -f simulations/omnetpp.ini \
+        -c "$config"
+done
+```
+```bash 6.2
+for config in \
+    Final_N2_Low Final_N2_Medium Final_N2_High \
+    Final_N4_Low Final_N4_Medium Final_N4_High \
+    Final_N8_Low Final_N8_Medium Final_N8_High
+do
+    ./out/gcc-release/src/LoadBalancingSimulation \
         -u Cmdenv \
         -n . \
         -f simulations/omnetpp.ini \
