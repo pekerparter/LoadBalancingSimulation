@@ -2,8 +2,20 @@
 
 set -e
 
-EXEC="./out/clang-release/src/LoadBalancingSimulation"
 INI="simulations/omnetpp.ini"
+
+if [ -x "./out/clang-release/src/LoadBalancingSimulation" ]; then
+    EXEC="./out/clang-release/src/LoadBalancingSimulation"
+elif [ -x "./out/gcc-release/src/LoadBalancingSimulation" ]; then
+    EXEC="./out/gcc-release/src/LoadBalancingSimulation"
+else
+    echo "Error: release executable not found."
+    echo "Build the project first with:"
+    echo "  make MODE=release"
+    exit 1
+fi
+
+echo "Using executable: $EXEC"
 
 configs=(
     Final_N2_Low
