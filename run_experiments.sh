@@ -6,31 +6,29 @@ EXEC="./out/clang-release/src/LoadBalancingSimulation"
 INI="simulations/omnetpp.ini"
 
 configs=(
-    LowRoundRobin
-    LowRandom
-    LowShortestQueue
-    LowPowerOfTwo
-    MediumRoundRobin
-    MediumRandom
-    MediumShortestQueue
-    MediumPowerOfTwo
-    HighRoundRobin
-    HighRandom
-    HighShortestQueue
-    HighPowerOfTwo
+    Final_N2_Low
+    Final_N2_Medium
+    Final_N2_High
+    Final_N4_Low
+    Final_N4_Medium
+    Final_N4_High
+    Final_N8_Low
+    Final_N8_Medium
+    Final_N8_High
 )
 
 for config in "${configs[@]}"; do
-    for run in {0..9}; do
-        echo "Running $config repetition $run"
+    echo
+    echo "======================================"
+    echo "Running $config"
+    echo "======================================"
 
-        "$EXEC" \
-            -u Cmdenv \
-            -n . \
-            -f "$INI" \
-            -c "$config" \
-            -r "$run"
-    done
+    "$EXEC" \
+        -u Cmdenv \
+        -n . \
+        -f "$INI" \
+        -c "$config"
 done
 
-echo "All experiments completed successfully."
+echo
+echo "All 36 final scenarios completed successfully."

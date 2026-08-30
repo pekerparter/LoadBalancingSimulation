@@ -1,8 +1,6 @@
 import csv
-import glob
 import os
 import subprocess
-from collections import defaultdict
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -10,17 +8,35 @@ import numpy as np
 
 RESULT_DIR = "simulations/results"
 
-CONFIGS = [
-    "WarmupHighRoundRobin",
-    "WarmupHighRandom",
-    "WarmupHighShortestQueue",
-    "WarmupHighPowerOfTwo",
-]
+CONFIG_GROUPS = {
+    2: {
+        "Round Robin": "WarmupHighRoundRobin",
+        "Random": "WarmupHighRandom",
+        "Shortest Queue": "WarmupHighShortestQueue",
+        "Power of Two": "WarmupHighPowerOfTwo",
+    },
+
+    4: {
+        "Round Robin": "WarmupN4RoundRobin",
+        "Random": "WarmupN4Random",
+        "Shortest Queue": "WarmupN4ShortestQueue",
+        "Power of Two": "WarmupN4PowerOfTwo",
+    },
+
+    8: {
+        "Round Robin": "WarmupN8RoundRobin",
+        "Random": "WarmupN8Random",
+        "Shortest Queue": "WarmupN8ShortestQueue",
+        "Power of Two": "WarmupN8PowerOfTwo",
+    },
+}
 
 RUNS = range(5)
 
-BIN_WIDTH = 25.0
 SIM_TIME = 2000.0
+
+# Larger than before to smooth the curves more clearly.
+BIN_WIDTH = 50.0
 
 
 def export_vec_to_csv(vec_file, csv_file):
@@ -32,7 +48,8 @@ def export_vec_to_csv(vec_file, csv_file):
             "-o",
             csv_file
         ],
-        check=True
+        check=True,
+        stdout=subprocess.DEVNULL
     )
 
 
@@ -46,18 +63,17 @@ def read_response_times(csv_file):
             if row["type"] != "vector":
                 continue
 
-            if row["name"].startswith("responseTime"):
+            if not row["name"].startswith("responseTime"):
                 continue
 
             times = row["vectime"].split()
             values = row["vecvalue"].split()
 
-            for t, value in zip(times, values):
+            for time, value in zip(times, values):
                 observations.append(
-                    (float(t), float(value))
+                    (float(time), float(value))
                 )
 
-    print(f"  Found {len(observations)} response-time observations in {csv_file}")
     return observations
 
 
@@ -90,13 +106,11 @@ def calculate_binned_means(observations):
     return centers, means
 
 
-all_config_means = {}
-
-
-for config in CONFIGS:
+def process_configuration(config):
     repetition_means = []
 
     for run in RUNS:
+
         vec_file = os.path.join(
             RESULT_DIR,
             f"{config}-#{run}.vec"
@@ -104,12 +118,12 @@ for config in CONFIGS:
 
         csv_file = os.path.join(
             RESULT_DIR,
-            f"{config}-#{run}-warmup.csv"
+            f"{config}-#{run}-warmup-temp.csv"
         )
 
         if not os.path.exists(vec_file):
             raise FileNotFoundError(
-                f"Missing {vec_file}"
+                f"Missing result file: {vec_file}"
             )
 
         print(
@@ -125,50 +139,63 @@ for config in CONFIGS:
             csv_file
         )
 
-        centers, means = (
-            calculate_binned_means(
-                observations
-            )
+        print(
+            f"  Found {len(observations)} "
+            f"response-time observations"
+        )
+
+        centers, means = calculate_binned_means(
+            observations
         )
 
         repetition_means.append(means)
+
+        # The CSV is temporary.
+        os.remove(csv_file)
 
     repetition_means = np.array(
         repetition_means
     )
 
-    config_mean = np.nanmean(
+    mean_across_repetitions = np.nanmean(
         repetition_means,
         axis=0
     )
 
-    all_config_means[config] = (
-        centers,
-        config_mean
-    )
+    return centers, mean_across_repetitions
 
 
-for config, (centers, means) in all_config_means.items():
+for number_of_servers, algorithms in CONFIG_GROUPS.items():
 
-    plt.figure(figsize=(10, 5))
+    plt.figure(figsize=(11, 6))
 
-    plt.plot(
-        centers,
-        means
-    )
+    for algorithm_name, config_name in algorithms.items():
+
+        centers, means = process_configuration(
+            config_name
+        )
+
+        plt.plot(
+            centers,
+            means,
+            label=algorithm_name
+        )
 
     plt.xlabel("Simulation time (s)")
     plt.ylabel("Mean response time (s)")
+
     plt.title(
-        f"Warm-up diagnostic: {config}"
+        f"Warm-up diagnostic - "
+        f"{number_of_servers} servers - high load"
     )
 
+    plt.legend()
     plt.grid(True)
 
     plt.tight_layout()
 
     output_file = (
-        f"{config}_warmup.png"
+        f"Warmup_N{number_of_servers}_comparison.png"
     )
 
     plt.savefig(

@@ -10,12 +10,26 @@ out/
 build/
 bin/
 
+# Local executable outputs
+LoadBalancingSimulation
+LoadBalancingSimulation_dbg
+src/LoadBalancingSimulation
+src/LoadBalancingSimulation_dbg
+
 # Simulation results
 results/
 *.sca
 *.vec
 *.vci
 *.elog
+*.anf
+
+# Generated analysis data / figures
+Warmup*.png
+
+# Python cache
+__pycache__/
+*.pyc
 
 # Temporary files
 *.tmp
@@ -25,11 +39,8 @@ results/
 
 # Eclipse temporary metadata
 .metadata/
+simulations/.qtenvrc
 
 # Generated message files
 *_m.cc
 *_m.h
-src/LoadBalancingSimulation
-simulations/.qtenvrc
-*.anf
-*_warmup.png

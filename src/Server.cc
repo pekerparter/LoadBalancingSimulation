@@ -20,6 +20,10 @@ void Server::initialize()
     responseTimeSignal = registerSignal("responseTime");
     waitingTimeSignal = registerSignal("waitingTime");
     queueLengthSignal = registerSignal("queueLength");
+    busySignal = registerSignal("busy");
+
+    emit(queueLengthSignal, 0L);
+    emit(busySignal, false);
 
     measurementStart = par("measurementStart");
 
@@ -45,8 +49,7 @@ void Server::handleMessage(cMessage *msg)
         // for response-time and throughput measurements.
         if (completedJob->getCreationTime() >= measurementStart) {
 
-            simtime_t responseTime =
-                simTime() - completedJob->getCreationTime();
+            simtime_t responseTime = simTime() - completedJob->getCreationTime();
 
             emit(responseTimeSignal, responseTime);
 
@@ -54,17 +57,13 @@ void Server::handleMessage(cMessage *msg)
 
             completedJobs++;
 
-            EV << "Completed job "
-               << completedJob->getJobId()
+            EV << "Completed job " << completedJob->getJobId()
                << " at time " << simTime()
-               << ", response time = "
-               << responseTime << "\n";
+               << ", response time = " << responseTime << "\n";
         }
         else {
-            EV << "Completed warm-up job "
-               << completedJob->getJobId()
-               << " at time " << simTime()
-               << "\n";
+            EV << "Completed warm-up job " << completedJob->getJobId()
+               << " at time " << simTime() << "\n";
         }
 
         delete currentJob;
@@ -77,14 +76,14 @@ void Server::handleMessage(cMessage *msg)
             // stayed at its previous value.
             updateQueueArea();
 
-            cMessage *nextJob =
-                check_and_cast<cMessage *>(queue.pop());
+            cMessage *nextJob = check_and_cast<cMessage *>(queue.pop());
 
-            if (simTime() >= measurementStart) {
-                emit(queueLengthSignal, queue.getLength());
-            }
+            emit(queueLengthSignal, queue.getLength());
 
             startService(nextJob);
+        }
+        else {
+            emit(busySignal, false);
         }
     }
 
@@ -99,14 +98,10 @@ void Server::handleMessage(cMessage *msg)
 
             queue.insert(job);
 
-            if (simTime() >= measurementStart) {
-                emit(queueLengthSignal, queue.getLength());
-            }
+            emit(queueLengthSignal, queue.getLength());
 
-            EV << "Queued job "
-               << job->getJobId()
-               << ", queue length = "
-               << queue.getLength() << "\n";
+            EV << "Queued job " << job->getJobId()
+               << ", queue length = " << queue.getLength() << "\n";
         }
     }
 }
@@ -117,17 +112,15 @@ void Server::startService(cMessage *job)
     currentJob = job;
     serviceStartTime = simTime();
 
+    emit(busySignal, true);
+
     Job *typedJob =
         check_and_cast<Job *>(job);
 
-    // Only record waiting time for jobs that
-    // arrived at the server after warm-up.
-    if (typedJob->getServerArrivalTime()
-        >= measurementStart) {
+    if (typedJob->getServerArrivalTime() >= measurementStart) {
 
         simtime_t waitingTime =
-            simTime()
-            - typedJob->getServerArrivalTime();
+            simTime() - typedJob->getServerArrivalTime();
 
         emit(waitingTimeSignal, waitingTime);
 
@@ -135,22 +128,18 @@ void Server::startService(cMessage *job)
             waitingTime.dbl()
         );
 
-        EV << "Starting service for job "
-           << typedJob->getJobId()
+        EV << "Starting service for job " << typedJob->getJobId()
            << " at time " << simTime()
-           << ", waiting time = "
-           << waitingTime;
+           << ", waiting time = " << waitingTime;
     }
     else {
-        EV << "Starting service for warm-up job "
-           << typedJob->getJobId()
-           << " at time " << simTime();
+        EV << "Starting service for warm-up job " << typedJob->getJobId() << " at time " << simTime();
     }
 
-    simtime_t duration = typedJob->getServiceTime();
+    simtime_t duration =
+        typedJob->getServiceTime();
 
-    EV << ", service duration = "
-       << duration << "\n";
+    EV << ", service duration = "<< duration << "\n";
 
     scheduleAt(
         simTime() + duration,

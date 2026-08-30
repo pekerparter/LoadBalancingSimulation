@@ -23,10 +23,12 @@ simple Server
         @signal[responseTime](type=simtime_t);
         @signal[waitingTime](type=simtime_t);
         @signal[queueLength](type=long);
+        @signal[busy](type=bool);
 
         @statistic[responseTime](source=responseTime; record=vector);
         @statistic[waitingTime](source=waitingTime; record=vector);
         @statistic[queueLength](source=queueLength; record=vector);
+        @statistic[busy](source=busy; record=vector);
 
     gates:
         input in;

@@ -23,6 +23,7 @@ class Server : public cSimpleModule
     simsignal_t responseTimeSignal;
     simsignal_t waitingTimeSignal;
     simsignal_t queueLengthSignal;
+    simsignal_t busySignal;
 
     simtime_t serviceStartTime;
     simtime_t measurementStart;
